@@ -1,5 +1,6 @@
 """JARVIS ElevenLabs voice proxy. Never place credentials in public HTML."""
 import os
+import hmac
 import time
 import threading
 from collections import defaultdict, deque
@@ -32,7 +33,7 @@ def options():
         return jsonify(error="origin not allowed"), 403
     resp = Response(status=204)
     resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Jarvis-Token"
     resp.headers["Access-Control-Max-Age"] = "600"
     return resp
 
@@ -40,6 +41,10 @@ def options():
 def speak():
     if request.headers.get("Origin") != ALLOWED_ORIGIN:
         return jsonify(error="origin not allowed"), 403
+    expected = os.getenv("JARVIS_ACCESS_TOKEN", "")
+    received = request.headers.get("X-Jarvis-Token", "")
+    if len(expected) < 24 or not hmac.compare_digest(expected, received):
+        return jsonify(error="not authorized"), 401
     key = os.getenv("ELEVENLABS_API_KEY")
     if not key:
         return jsonify(error="voice not configured"), 503
