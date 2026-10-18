@@ -1,5 +1,5 @@
 <!doctype html><html lang="fi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#020714"><title>JARVIS - puheohjattu testi</title><style>
-*{box-sizing:border-box}body{margin:0;background:#020714;color:#cbfaff;font:16px system-ui,sans-serif;min-height:100dvh;display:flex;flex-direction:column;align-items:center}header{text-align:center;padding:12px 10px 2px}h1{margin:0;color:#89efff;letter-spacing:5px;font-size:23px}p{font-size:12px;color:#9ebfce;margin:6px}#stage{position:relative;width:min(100vw,450px);aspect-ratio:1;background:radial-gradient(circle at 50% 50%,#09233d,#020714 65%);overflow:hidden;touch-action:manipulation}#stage.pyramid{background:#000}canvas{width:100%;height:100%;display:block}#ui{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:12px 8px;max-width:500px}button{border:1px solid #3ac5f0;border-radius:8px;padding:11px 12px;background:#063151;color:white;font-weight:650;font-size:13px}button:active{background:#17668c}.active{background:#196a89}#status{padding:5px 12px 16px;font-size:12px;text-align:center;color:#b3d2db;min-height:36px}footer{font-size:11px;opacity:.75;text-align:center;padding:0 12px 25px}.hide{display:none}</style></head><body><header><h1>J.A.R.V.I.S.</h1><p>Hologrammi ja puheohjaus</p></header><div id="stage"><canvas id="cv" width="800" height="800" aria-label="Animoitu JARVIS-valohahmo"></canvas></div><div id="ui"><button id="listen">🎙 Aloita kuuntelu</button><button id="diag">🧪 Mikrofonitesti</button><button id="talk">🔊 Testaa ääni</button><label style="display:flex;align-items:center;gap:5px;font-size:12px">Puheääni <select id="voice" aria-label="Valitse puheääni" style="max-width:165px;background:#063151;color:white;border:1px solid #3ac5f0;border-radius:8px;padding:9px"></select></label><button id="mode">◇ Pyramiditila</button><button id="full">⛶ Koko näyttö</button></div><div id="status" aria-live="polite">Aloita kuuntelu, sano sitten ”Jarvis”.</div><div id="heard" style="font-size:12px;color:#59d9ef;min-height:21px;text-align:center;padding:0 12px"></div><footer>Puheentunnistus vaatii yleensä HTTPS-osoitteen ja selaimen mikrofoniluvan. Sovelluksen on oltava avoinna.</footer><script>
+*{box-sizing:border-box}body{margin:0;background:#020714;color:#cbfaff;font:16px system-ui,sans-serif;min-height:100dvh;display:flex;flex-direction:column;align-items:center}header{text-align:center;padding:12px 10px 2px}h1{margin:0;color:#89efff;letter-spacing:5px;font-size:23px}p{font-size:12px;color:#9ebfce;margin:6px}#stage{position:relative;width:min(100vw,450px);aspect-ratio:1;background:radial-gradient(circle at 50% 50%,#09233d,#020714 65%);overflow:hidden;touch-action:manipulation}#stage.pyramid{background:#000}canvas{width:100%;height:100%;display:block}#ui{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:12px 8px;max-width:500px}button{border:1px solid #3ac5f0;border-radius:8px;padding:11px 12px;background:#063151;color:white;font-weight:650;font-size:13px}button:active{background:#17668c}.active{background:#196a89}#status{padding:5px 12px 16px;font-size:12px;text-align:center;color:#b3d2db;min-height:36px}footer{font-size:11px;opacity:.75;text-align:center;padding:0 12px 25px}.hide{display:none}</style></head><body><header><h1>J.A.R.V.I.S.</h1><p>Hologrammi ja puheohjaus</p></header><div id="stage"><canvas id="cv" width="800" height="800" aria-label="Animoitu JARVIS-valohahmo"></canvas></div><div id="ui"><button id="listen">🎙 Aloita kuuntelu</button><button id="diag">🧪 Mikrofonitesti</button><button id="talk">🔊 Testaa ääni</button><label style="display:flex;align-items:center;gap:5px;font-size:12px">Puheääni <select id="voice" aria-label="Valitse puheääni" style="max-width:165px;background:#063151;color:white;border:1px solid #3ac5f0;border-radius:8px;padding:9px"></select></label><button id="mode">◇ Pyramiditila</button><button id="full">⛶ Koko näyttö</button></div><div id="status" aria-live="polite">Aloita kuuntelu, sano sitten ”Jarvis”.</div><div id="heard" style="font-size:12px;color:#59d9ef;min-height:21px;text-align:center;padding:0 12px"></div><footer>Adam-miesääni vaatii vielä suojatun palvelinyhteyden. Tällä hetkellä käytetään selaimen ääntä. Puheentunnistus vaatii yleensä HTTPS-osoitteen ja selaimen mikrofoniluvan. Sovelluksen on oltava avoinna.</footer><script>
 const c=document.getElementById('cv'),x=c.getContext('2d'),S=800;let pyramid=false,playing=false,start=Date.now();function line(points,a=1,w=3){x.strokeStyle=`rgba(84,231,255,${a})`;x.lineWidth=w;x.beginPath();points.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.stroke()}function ellipse(cx,cy,rx,ry,a=1,w=2){x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);x.strokeStyle=`rgba(51,210,255,${a})`;x.lineWidth=w;x.stroke()}function bot(t){x.save();x.shadowColor='#00cfff';x.shadowBlur=19;let bob=Math.sin(t*1.6)*6;x.translate(0,bob); // bust
 x.fillStyle='rgba(0,158,255,.05)';x.beginPath();x.moveTo(-102,120);x.lineTo(-90,42);x.lineTo(-52,20);x.lineTo(-38,-8);x.lineTo(38,-8);x.lineTo(52,20);x.lineTo(90,42);x.lineTo(102,120);x.closePath();x.fill();line([[-102,120],[-90,42],[-52,20],[-38,-8]],.92,3);line([[38,-8],[52,20],[90,42],[102,120]],.92,3);line([[-90,42],[-44,70],[0,99],[44,70],[90,42]],.7,2);line([[-42,15],[0,42],[42,15]],.5,2);
 // neck
@@ -35,15 +35,34 @@ function refreshVoices(){
   voiceSelect.value=old!==''&&availableVoices[Number(old)]?old:String(preferred.i);
 }
 if('speechSynthesis' in window){refreshVoices();window.speechSynthesis.addEventListener?.('voiceschanged',refreshVoices)}
-const say=(text)=>{
+// Asetetaan vasta, kun ElevenLabs-palvelin on julkaistu Renderiin.
+const JARVIS_VOICE_ENDPOINT = '';
+let currentAudio=null;
+const say=async(text)=>{
   msg.textContent='JARVIS: '+text;
-  if(!('speechSynthesis' in window))return;
   speaking=true;
   if(recognition&&recognizing){try{recognition.stop()}catch(e){}}
-  window.speechSynthesis.cancel();
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+  const finish=()=>{speaking=false;if(listeningWanted)scheduleListen(450)};
+  if(JARVIS_VOICE_ENDPOINT){
+    try{
+      const response=await fetch(JARVIS_VOICE_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      if(!response.ok)throw new Error('Äänipalvelu ei vastaa ('+response.status+')');
+      const blob=await response.blob();
+      const url=URL.createObjectURL(blob);
+      const audio=new Audio(url);currentAudio=audio;
+      const done=()=>{URL.revokeObjectURL(url);if(currentAudio===audio)currentAudio=null;finish()};
+      audio.onended=done;audio.onerror=done;
+      await audio.play();return;
+    }catch(e){msg.textContent='Adam-ääni ei ole käytettävissä; käytetään puhelimen ääntä. '+e.message;}
+  }
+  if(!('speechSynthesis' in window)){finish();return}
   const u=new SpeechSynthesisUtterance(text);
-  u.lang='fi-FI';u.rate=.94;u.pitch=1;const selected=availableVoices[Number(voiceSelect.value)];if(selected){u.voice=selected;u.lang=selected.lang;}
-  u.onend=u.onerror=()=>{speaking=false;if(listeningWanted)scheduleListen(450)};
+  u.lang='fi-FI';u.rate=.94;u.pitch=1;
+  const selected=availableVoices[Number(voiceSelect.value)];
+  if(selected){u.voice=selected;u.lang=selected.lang}
+  u.onend=u.onerror=finish;
   window.speechSynthesis.speak(u);
 };
 function scheduleListen(delay=550){clearTimeout(restartTimer);restartTimer=setTimeout(()=>{if(listeningWanted&&!speaking&&!recognizing)startRecognition()},delay)}
