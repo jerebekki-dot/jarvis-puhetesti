@@ -36,7 +36,7 @@ function refreshVoices(){
 }
 if('speechSynthesis' in window){refreshVoices();window.speechSynthesis.addEventListener?.('voiceschanged',refreshVoices)}
 // Asetetaan vasta, kun ElevenLabs-palvelin on julkaistu Renderiin.
-const JARVIS_VOICE_ENDPOINT = '';
+const JARVIS_VOICE_ENDPOINT = 'https://jarvis-voice-9d66.onrender.com/speak';
 let currentAudio=null;
 const say=async(text)=>{
   msg.textContent='JARVIS: '+text;
