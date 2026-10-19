@@ -18,7 +18,7 @@ header p{font-size:13px;letter-spacing:.09em;margin-top:10px}
 footer{max-width:510px;line-height:1.45;margin-top:10px;padding-bottom:22px}
 @media(min-width:780px){#stage{width:410px}#ui{max-width:520px}}
 @media(prefers-reduced-motion:reduce){button{transition:none!important}}
-</style></head><body><header><h1>J.A.R.V.I.S.</h1><p>Hologrammi ja puheohjaus</p></header><div id="stage"><canvas id="cv" width="800" height="800" aria-label="Animoitu JARVIS-valohahmo"></canvas></div><div id="ui"><button id="listen">🎙 Aloita kuuntelu</button><button id="diag">🧪 Mikrofonitesti</button><button id="talk">🔊 Testaa ääni</button><button id="unlock">🔐 Adam-äänen avaus</button><label style="display:flex;align-items:center;gap:5px;font-size:12px">Puheääni <select id="voice" aria-label="Valitse puheääni" style="max-width:165px;background:#063151;color:white;border:1px solid #3ac5f0;border-radius:8px;padding:9px"></select></label><button id="mode">◇ Pyramiditila</button><button id="full">⛶ Koko näyttö</button><button id="update" type="button">↻ Päivitä ohjelma</button></div><div id="status" aria-live="polite">Aloita kuuntelu, sano sitten ”Jarvis”.</div><div id="heard" style="font-size:12px;color:#59d9ef;min-height:21px;text-align:center;padding:0 12px"></div><footer>Versio 1.3 • Puheohjaus toimii selaimen ollessa auki. Adam-ääni tarvitsee erillisen palvelinyhteyden ja toimivat käyttöoikeudet.</footer><script>
+</style></head><body><header><h1>J.A.R.V.I.S.</h1><p>Hologrammi ja puheohjaus</p></header><div id="stage"><canvas id="cv" width="800" height="800" aria-label="Animoitu JARVIS-valohahmo"></canvas></div><div id="ui"><button id="listen">🎙 Aloita kuuntelu</button><button id="diag">🧪 Mikrofonitesti</button><button id="talk">🔊 Testaa ääni</button><button id="unlock">🔐 Adam-äänen avaus</button><label style="display:flex;align-items:center;gap:5px;font-size:12px">Puheääni <select id="voice" aria-label="Valitse puheääni" style="max-width:165px;background:#063151;color:white;border:1px solid #3ac5f0;border-radius:8px;padding:9px"></select></label><button id="mode">◇ Pyramiditila</button><button id="full">⛶ Koko näyttö</button><button id="update" type="button">↻ Päivitä ohjelma</button></div><div id="status" aria-live="polite">Aloita kuuntelu, sano sitten ”Jarvis”.</div><div id="heard" style="font-size:12px;color:#59d9ef;min-height:21px;text-align:center;padding:0 12px"></div><footer>JARVIS 3.0 kehitysversio • Puheohjaus toimii selaimen ollessa auki. Adam-ääni tarvitsee erillisen palvelinyhteyden ja toimivat käyttöoikeudet.</footer><script>
 const c=document.getElementById('cv'),x=c.getContext('2d'),S=800;let pyramid=false,playing=false,start=Date.now();function line(points,a=1,w=3){x.strokeStyle=`rgba(84,231,255,${a})`;x.lineWidth=w;x.beginPath();points.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.stroke()}function ellipse(cx,cy,rx,ry,a=1,w=2){x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);x.strokeStyle=`rgba(51,210,255,${a})`;x.lineWidth=w;x.stroke()}function bot(t){x.save();x.shadowColor='#00cfff';x.shadowBlur=19;let bob=Math.sin(t*1.6)*6;x.translate(0,bob); // bust
 x.fillStyle='rgba(0,158,255,.05)';x.beginPath();x.moveTo(-102,120);x.lineTo(-90,42);x.lineTo(-52,20);x.lineTo(-38,-8);x.lineTo(38,-8);x.lineTo(52,20);x.lineTo(90,42);x.lineTo(102,120);x.closePath();x.fill();line([[-102,120],[-90,42],[-52,20],[-38,-8]],.92,3);line([[38,-8],[52,20],[90,42],[102,120]],.92,3);line([[-90,42],[-44,70],[0,99],[44,70],[90,42]],.7,2);line([[-42,15],[0,42],[42,15]],.5,2);
 // neck
@@ -31,7 +31,10 @@ hologram(400,175,.63,Math.PI,t);hologram(400,625,.63,0,t);hologram(175,400,.63,M
 }else{let g=x.createRadialGradient(400,400,0,400,400,360);g.addColorStop(0,'#102d43');g.addColorStop(1,'#020714');x.fillStyle=g;x.fillRect(0,0,S,S);hologram(400,460,1.65,0,t)}requestAnimationFrame(draw)}if(window.requestAnimationFrame){requestAnimationFrame(draw)}else{setInterval(()=>draw(Date.now()),100)}
 const msg=document.getElementById('status');
 const heard=document.getElementById('heard');
-const currentVersion='1.3';
+const currentVersion='3.0-dev.1';
+const diagnostics={version:currentVersion,errors:[],recognitionStarts:0};
+function logDiagnostic(message){diagnostics.errors.push({at:new Date().toISOString(),message:String(message)});if(diagnostics.errors.length>20)diagnostics.errors.shift();}
+window.JARVIS_DIAGNOSTICS=diagnostics;
 document.getElementById('update').onclick=async()=>{
  const btn=document.getElementById('update');
  btn.disabled=true;
@@ -57,7 +60,7 @@ const secure = window.isSecureContext || location.hostname === 'localhost';
 if (!secure) { document.getElementById('status').textContent = 'Mikrofoni tarvitsee HTTPS-osoitteen. Avaa verkossa julkaistu versio.'; }
 window.addEventListener('unhandledrejection',e=>{document.getElementById('status').textContent='Selaimen virhe: '+(e.reason?.message||String(e.reason))});
 const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-let listeningWanted=false,recognition=null,recognizing=false,speaking=false,dialogUntil=0,restartTimer=null;
+let listeningWanted=false,recognition=null,recognizing=false,speaking=false,dialogUntil=0,restartTimer=null,session=0,errorStreak=0,recognitionStarting=false;
 // Androidin ja selaimen tarjoamat puheäänet vaihtelevat laitteittain.
 const voiceSelect=document.getElementById('voice');
 let availableVoices=[];
@@ -111,17 +114,20 @@ const say=async(text)=>{
   u.onend=u.onerror=finish;
   window.speechSynthesis.speak(u);
 };
-function scheduleListen(delay=550){clearTimeout(restartTimer);restartTimer=setTimeout(()=>{if(listeningWanted&&!speaking&&!recognizing)startRecognition()},delay)}
+function scheduleListen(delay=750){clearTimeout(restartTimer);const generation=session;restartTimer=setTimeout(()=>{if(generation===session&&listeningWanted&&!speaking&&!recognizing&&!recognitionStarting)startRecognition()},delay)}
 function startRecognition(){
   if(!secure){msg.textContent='Avaa JARVIS HTTPS-osoitteessa mikrofonin käyttöä varten.';return}
   if(!SpeechRecognition){msg.textContent='Puheentunnistus ei ole käytettävissä tässä selaimessa. Kokeile Chromea HTTPS-osoitteessa.';return}
-  if(recognizing||speaking||!listeningWanted)return;
-  recognition=new SpeechRecognition();recognition.lang='fi-FI';recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=1;
-  recognition.onstart=()=>{recognizing=true;msg.textContent='Kuuntelen... sano ”Jarvis”.';listenBtn.textContent='⏹ Lopeta kuuntelu';listenBtn.classList.add('active')};
-  recognition.onresult=e=>{let spoken=Array.from(e.results).map(r=>r[0].transcript).join(' ').trim();heard.textContent='Kuulin: '+spoken;handleSpeech(spoken)};
-  recognition.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){listeningWanted=false;msg.textContent='Mikrofonin käyttö estetty. Avaa ohjelma HTTPS-osoitteessa ja salli mikrofoni.'}else if(e.error==='network'){listeningWanted=false;msg.textContent='Puheentunnistus tarvitsee verkkoyhteyden. Tarkista internet ja kokeile uudestaan.'}else if(e.error!=='no-speech'&&e.error!=='aborted'){msg.textContent='Mikrofonivirhe: '+e.error}};
-  recognition.onend=()=>{recognizing=false;if(listeningWanted&&!speaking)scheduleListen(700);else if(!listeningWanted){listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}};
-  try{recognition.start()}catch(e){recognizing=false;msg.textContent='Puheentunnistus ei käynnistynyt: '+e.message}
+  if(recognizing||recognitionStarting||speaking||!listeningWanted)return;
+  recognitionStarting=true;
+  const generation=session;
+  const engine=new SpeechRecognition();
+  recognition=engine;diagnostics.recognitionStarts++;engine.lang='fi-FI';engine.continuous=false;engine.interimResults=false;engine.maxAlternatives=1;
+  engine.onstart=()=>{if(generation!==session)return;recognitionStarting=false;recognizing=true;errorStreak=0;msg.textContent='Kuuntelen... sano ”Jarvis”.';listenBtn.textContent='⏹ Lopeta kuuntelu';listenBtn.classList.add('active')};
+  engine.onresult=e=>{if(generation!==session)return;let spoken=Array.from(e.results).map(r=>r[0].transcript).join(' ').trim();heard.textContent='Kuulin: '+spoken;handleSpeech(spoken)};
+  engine.onerror=e=>{if(generation!==session)return;logDiagnostic('SpeechRecognition: '+e.error);errorStreak++;if(e.error==='not-allowed'||e.error==='service-not-allowed'){listeningWanted=false;msg.textContent='Mikrofonin käyttö estetty. Avaa ohjelma HTTPS-osoitteessa ja salli mikrofoni.'}else if(e.error==='network'){listeningWanted=false;msg.textContent='Puheentunnistus tarvitsee verkkoyhteyden. Tarkista internet ja kokeile uudestaan.'}else if(e.error!=='no-speech'&&e.error!=='aborted'){msg.textContent='Mikrofonivirhe: '+e.error}};
+  engine.onend=()=>{if(generation!==session)return;recognitionStarting=false;recognizing=false;if(listeningWanted&&!speaking){if(errorStreak>=5){listeningWanted=false;msg.textContent='Puheentunnistus keskeytettiin viiden virheen jälkeen. Paina Aloita kuuntelu uudelleen.';listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}else scheduleListen(Math.min(6000,750*Math.max(1,errorStreak)))}else if(!listeningWanted){listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}};
+  try{engine.start()}catch(e){recognitionStarting=false;recognizing=false;logDiagnostic(e.message);errorStreak++;msg.textContent='Puheentunnistus ei käynnistynyt: '+e.message;if(errorStreak<5)scheduleListen(1300)}
 }
 function handleSpeech(spoken){
   const q=spoken.toLocaleLowerCase('fi-FI').replace(/[.,!?]/g,'').trim();
@@ -132,17 +138,20 @@ function handleSpeech(spoken){
   if(!task||task==='herää'||task==='hei')return say('Kyllä, kuuntelen. Miten voin auttaa?');
   if(task.includes('kello')||task.includes('aika'))return say('Kello on '+new Date().toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'}));
   if(task.includes('päivä')||task.includes('päivämäärä'))return say('Tänään on '+new Date().toLocaleDateString('fi-FI',{weekday:'long',day:'numeric',month:'long'}));
-  if(task.includes('kuka olet')||task.includes('mikä olet'))return say('Olen JARVIS, puheohjattava hologrammiavustajasi. Tämä on ensimmäinen testiversioni.');
+  if(task.includes('kuka olet')||task.includes('mikä olet'))return say('Olen JARVIS, puheohjattava hologrammiavustajasi. Tämä on kehitysversio kolme.');
+  if(task.includes('mitä osaat')||task.includes('komennot'))return say('Osaan kertoa kellonajan, päivämäärän, vaihtaa hologrammin pyramiditilaan, avata normaalin näkymän ja muistaa viimeisimmän lyhyen keskusteluaiheen tämän istunnon aikana.');
+  if(task.includes('kiitos'))return say('Ole hyvä.');
+  if(task.includes('mikä versio')||task.includes('versio'))return say('Käytössä on JARVIS '+currentVersion+'.');
   if(task.includes('pyramid')){pyramid=true;document.getElementById('mode').textContent='◉ Tavallinen näkymä';return say('Pyramiditila aktivoitu. Aseta heijastin näytölle.')}
   if(task.includes('normaali')||task.includes('tavallinen')){pyramid=false;document.getElementById('mode').textContent='◇ Pyramiditila';return say('Tavallinen näkymä aktivoitu.')}
   if(task.includes('lopeta')||task.includes('hiljaa')){listeningWanted=false;return say('Kuuntelu lopetettu.')}
   return say('Kuulin kysymyksesi, mutta tämä testiversio osaa vasta muutamia komentoja, kuten kellonaika ja pyramiditila.');
 }
 listenBtn.onclick=()=>{
-  if(listeningWanted){listeningWanted=false;clearTimeout(restartTimer);if(recognition){try{recognition.abort()}catch(e){}}listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active');msg.textContent='Kuuntelu pysäytetty.';return}
+  if(listeningWanted){listeningWanted=false;session++;recognizing=false;recognitionStarting=false;clearTimeout(restartTimer);if(recognition){try{recognition.abort()}catch(e){}}listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active');msg.textContent='Kuuntelu pysäytetty.';return}
   if(!secure){msg.textContent='Avaa JARVIS HTTPS-osoitteessa. Paikallinen tiedosto ei anna mikrofonia käyttöön.';return}
   if(!SpeechRecognition){msg.textContent='Puheentunnistus ei ole käytettävissä täällä. Avaa Chromeen julkaistu HTTPS-versio.';return}
-  listeningWanted=true;startRecognition()
+  session++;errorStreak=0;listeningWanted=true;startRecognition()
 };
 diagBtn.onclick=async()=>{
   if(!secure){msg.textContent='Mikrofonitesti tarvitsee HTTPS-osoitteen.';return}
@@ -154,5 +163,8 @@ document.getElementById('mode').onclick=()=>{pyramid=!pyramid;document.getElemen
 document.getElementById('full').onclick=async()=>{if(!document.fullscreenElement){try{await document.documentElement.requestFullscreen()}catch(e){msg.textContent='Koko näyttö ei ole käytettävissä tässä selaimessa.'}}else document.exitFullscreen()};
 document.getElementById('talk').onclick=()=>say('JARVIS aktivoitu. Puheohjaustesti on valmis. Paina aloita kuuntelu ja sano Jarvis.');
 if(!SpeechRecognition)msg.textContent='Tämä selain ei tue puheentunnistusta. Kokeile Samsungin Chrome-selainta HTTPS-verkkosivulla.';
-window.addEventListener('error',function(e){msg.textContent='Virhe: '+String(e.message||'Tuntematon virhe')});
+window.addEventListener('error',function(e){const details=String(e.message||'Tuntematon virhe');logDiagnostic(details);msg.textContent='Virhe: '+details});
+window.addEventListener('unhandledrejection',e=>logDiagnostic(String(e.reason?.message||e.reason)));
+const versionLabel=document.createElement('div');versionLabel.id='version';versionLabel.textContent='Kehitysversio '+currentVersion;versionLabel.style.cssText='font:12px system-ui;text-align:center;color:#7ad8ed;margin:8px';document.querySelector('footer').before(versionLabel);
+const diagnosticsButton=document.createElement('button');diagnosticsButton.textContent='ⓘ Tila ja diagnostiikka';diagnosticsButton.onclick=()=>{msg.textContent='JARVIS '+currentVersion+' | Puheentunnistus: '+(SpeechRecognition?'saatavilla':'ei saatavilla')+' | HTTPS: '+(secure?'kyllä':'ei')+' | Käynnistykset: '+diagnostics.recognitionStarts+' | Viimeisin virhe: '+(diagnostics.errors.at(-1)?.message||'ei virheitä')};document.getElementById('ui').append(diagnosticsButton);
 </script></body></html>
