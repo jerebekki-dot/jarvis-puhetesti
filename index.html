@@ -30,6 +30,10 @@ function draw(now){let t=(Date.now()-start)/1000;x.clearRect(0,0,S,S);if(pyramid
 hologram(400,175,.63,Math.PI,t);hologram(400,625,.63,0,t);hologram(175,400,.63,Math.PI/2,t);hologram(625,400,.63,-Math.PI/2,t);
 }else{let g=x.createRadialGradient(400,400,0,400,400,360);g.addColorStop(0,'#102d43');g.addColorStop(1,'#020714');x.fillStyle=g;x.fillRect(0,0,S,S);hologram(400,460,1.65,0,t)}requestAnimationFrame(draw)}if(window.requestAnimationFrame){requestAnimationFrame(draw)}else{setInterval(()=>draw(Date.now()),100)}
 const msg=document.getElementById('status');
+let lastConversationTopic='';
+const stage=document.getElementById('stage');
+function setVisualState(state){stage.dataset.state=state;stage.style.boxShadow=state==='speaking'?'inset 0 0 70px #12dffb77,0 0 30px #0aeaff44':state==='listening'?'inset 0 0 50px #30ccff55':'inset 0 0 45px #02b9ef12';}
+
 const heard=document.getElementById('heard');
 const currentVersion='3.0-dev.1';
 const diagnostics={version:currentVersion,errors:[],recognitionStarts:0};
@@ -89,11 +93,11 @@ document.getElementById('unlock').onclick=()=>{
 };
 const say=async(text)=>{
   msg.textContent='JARVIS: '+text;
-  speaking=true;
+  speaking=true;setVisualState('speaking');
   if(recognition&&recognizing){try{recognition.stop()}catch(e){}}
   if(currentAudio){currentAudio.pause();currentAudio=null;}
   if('speechSynthesis' in window)window.speechSynthesis.cancel();
-  const finish=()=>{speaking=false;if(listeningWanted)scheduleListen(450)};
+  const finish=()=>{speaking=false;setVisualState(listeningWanted?'listening':'idle');if(listeningWanted)scheduleListen(450)};
   if(JARVIS_VOICE_ENDPOINT && jarvisAccessToken){
     try{
       const response=await fetch(JARVIS_VOICE_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Jarvis-Token':jarvisAccessToken},body:JSON.stringify({text})});
@@ -123,10 +127,10 @@ function startRecognition(){
   const generation=session;
   const engine=new SpeechRecognition();
   recognition=engine;diagnostics.recognitionStarts++;engine.lang='fi-FI';engine.continuous=false;engine.interimResults=false;engine.maxAlternatives=1;
-  engine.onstart=()=>{if(generation!==session)return;recognitionStarting=false;recognizing=true;errorStreak=0;msg.textContent='Kuuntelen... sano ”Jarvis”.';listenBtn.textContent='⏹ Lopeta kuuntelu';listenBtn.classList.add('active')};
+  engine.onstart=()=>{if(generation!==session)return;setVisualState('listening');recognitionStarting=false;recognizing=true;errorStreak=0;msg.textContent='Kuuntelen... sano ”Jarvis”.';listenBtn.textContent='⏹ Lopeta kuuntelu';listenBtn.classList.add('active')};
   engine.onresult=e=>{if(generation!==session)return;let spoken=Array.from(e.results).map(r=>r[0].transcript).join(' ').trim();heard.textContent='Kuulin: '+spoken;handleSpeech(spoken)};
   engine.onerror=e=>{if(generation!==session)return;logDiagnostic('SpeechRecognition: '+e.error);errorStreak++;if(e.error==='not-allowed'||e.error==='service-not-allowed'){listeningWanted=false;msg.textContent='Mikrofonin käyttö estetty. Avaa ohjelma HTTPS-osoitteessa ja salli mikrofoni.'}else if(e.error==='network'){listeningWanted=false;msg.textContent='Puheentunnistus tarvitsee verkkoyhteyden. Tarkista internet ja kokeile uudestaan.'}else if(e.error!=='no-speech'&&e.error!=='aborted'){msg.textContent='Mikrofonivirhe: '+e.error}};
-  engine.onend=()=>{if(generation!==session)return;recognitionStarting=false;recognizing=false;if(listeningWanted&&!speaking){if(errorStreak>=5){listeningWanted=false;msg.textContent='Puheentunnistus keskeytettiin viiden virheen jälkeen. Paina Aloita kuuntelu uudelleen.';listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}else scheduleListen(Math.min(6000,750*Math.max(1,errorStreak)))}else if(!listeningWanted){listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}};
+  engine.onend=()=>{if(generation!==session)return;setVisualState(speaking?'speaking':'idle');recognitionStarting=false;recognizing=false;if(listeningWanted&&!speaking){if(errorStreak>=5){listeningWanted=false;msg.textContent='Puheentunnistus keskeytettiin viiden virheen jälkeen. Paina Aloita kuuntelu uudelleen.';listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}else scheduleListen(Math.min(6000,750*Math.max(1,errorStreak)))}else if(!listeningWanted){listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active')}};
   try{engine.start()}catch(e){recognitionStarting=false;recognizing=false;logDiagnostic(e.message);errorStreak++;msg.textContent='Puheentunnistus ei käynnistynyt: '+e.message;if(errorStreak<5)scheduleListen(1300)}
 }
 function handleSpeech(spoken){
@@ -136,6 +140,8 @@ function handleSpeech(spoken){
   const task=q.replace(/.*?(jarvis|džarvis|järvis)\s*/i,'').trim();
   dialogUntil=Date.now()+15000;
   if(!task||task==='herää'||task==='hei')return say('Kyllä, kuuntelen. Miten voin auttaa?');
+  if(task.includes('mitä sanoin')||task.includes('mitä kysyin'))return say(lastConversationTopic?'Kysyit viimeksi: '+lastConversationTopic:'En ole vielä tallentanut keskusteluaihetta tässä istunnossa.');
+  if(!task.includes('lopeta')&&!task.includes('hiljaa'))lastConversationTopic=task.slice(0,180);
   if(task.includes('kello')||task.includes('aika'))return say('Kello on '+new Date().toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'}));
   if(task.includes('päivä')||task.includes('päivämäärä'))return say('Tänään on '+new Date().toLocaleDateString('fi-FI',{weekday:'long',day:'numeric',month:'long'}));
   if(task.includes('kuka olet')||task.includes('mikä olet'))return say('Olen JARVIS, puheohjattava hologrammiavustajasi. Tämä on kehitysversio kolme.');
@@ -148,7 +154,7 @@ function handleSpeech(spoken){
   return say('Kuulin kysymyksesi, mutta tämä testiversio osaa vasta muutamia komentoja, kuten kellonaika ja pyramiditila.');
 }
 listenBtn.onclick=()=>{
-  if(listeningWanted){listeningWanted=false;session++;recognizing=false;recognitionStarting=false;clearTimeout(restartTimer);if(recognition){try{recognition.abort()}catch(e){}}listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active');msg.textContent='Kuuntelu pysäytetty.';return}
+  if(listeningWanted){listeningWanted=false;session++;recognizing=false;recognitionStarting=false;clearTimeout(restartTimer);if(recognition){try{recognition.abort()}catch(e){}}listenBtn.textContent='🎙 Aloita kuuntelu';listenBtn.classList.remove('active');setVisualState('idle');msg.textContent='Kuuntelu pysäytetty.';return}
   if(!secure){msg.textContent='Avaa JARVIS HTTPS-osoitteessa. Paikallinen tiedosto ei anna mikrofonia käyttöön.';return}
   if(!SpeechRecognition){msg.textContent='Puheentunnistus ei ole käytettävissä täällä. Avaa Chromeen julkaistu HTTPS-versio.';return}
   session++;errorStreak=0;listeningWanted=true;startRecognition()
