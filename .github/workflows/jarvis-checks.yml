@@ -1,0 +1,27 @@
+name: JARVIS 3.0 checks
+on:
+  push:
+    branches: [feat/jarvis-android-2]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract JS and verify required features
+        run: python3 scripts/check_web.py
+      - name: Check JavaScript syntax
+        run: node --check /tmp/jarvis_inline_check.js
+      - name: Check no secret tokens in frontend
+        run: |
+          if grep -Eqi 'sk-[A-Za-z0-9_-]{24,}|elevenlabs_api_key[[:space:]]*=[[:space:]]*["\x27][^"\x27]+' index.html; then
+            echo 'Potential credential detected in frontend'
+            exit 1
+          fi
+          echo 'No obvious API key literals found'
